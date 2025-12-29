@@ -35,8 +35,8 @@ pub struct DrmSyncobjCreate {
 
 #[repr(C)]
 pub struct DrmSyncobjDestroy {
-    pub handle: u32,
-    pub pad: u32,
+    pub handle: RawDrmSyncobjHandle,
+    pub _padding: u32,
 }
 
 bitflags! {
@@ -60,23 +60,26 @@ bitflags! {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Deref)]
 #[repr(transparent)]
-pub struct DrmSyncobjHandle(u32);
+pub struct RawDrmSyncobjHandle(u32);
+impl RawDrmSyncobjHandle {
+    pub const NULL: Self = Self(0);
+}
 
 #[repr(C)]
 pub struct DrmSyncobjHandleToFd {
-    pub handle: u32,
+    pub handle: RawDrmSyncobjHandle,
     pub flags: SyncobjHandleToFdFlags,
     pub fd: RawFd,
     pub _padding: u32,
-    pub point: u32,
+    pub point: u64,
 }
 #[repr(C)]
 pub struct DrmSyncobjFdToHandle {
-    pub handle: u32,
+    pub handle: RawDrmSyncobjHandle,
     pub flags: SyncobjFdToHandleFlags,
     pub fd: RawFd,
     pub _padding: u32,
-    pub point: u32,
+    pub point: u64,
 }
 bitflags! {
     #[repr(transparent)]
@@ -87,8 +90,8 @@ bitflags! {
 }
 #[repr(C)]
 pub struct DrmSyncobjTransfer {
-    pub src_handle: u32,
-    pub dst_handle: u32,
+    pub src_handle: RawDrmSyncobjHandle,
+    pub dst_handle: RawDrmSyncobjHandle,
     pub src_point: u64,
     pub dst_point: u64,
     pub flags: SyncobjTransferFlags,
@@ -137,7 +140,7 @@ bitflags! {
 }
 #[repr(C)]
 pub struct DrmSyncobjEventFd {
-    pub handle: u32,
+    pub handle: RawDrmSyncobjHandle,
     // TODO: figure out what type this should be, maybe wait flags?
     pub flags: SyncobjEventFdFlags,
     pub point: u64,
@@ -189,7 +192,7 @@ pub struct DrmSyncobjTimelineQuery {
     pub flags: SyncobjTimelineQueryFlags,
 }
 unsafe impl Ioctl for DrmSyncobjCreate {
-    type Output = DrmSyncobjHandle;
+    type Output = RawDrmSyncobjHandle;
 
     const IS_MUTATING: bool = true;
 
@@ -207,7 +210,7 @@ unsafe impl Ioctl for DrmSyncobjCreate {
     ) -> rustix::io::Result<Self::Output> {
         let ptr = extract_output as *mut Self;
         let v = unsafe { &(*ptr) };
-        Ok(DrmSyncobjHandle(v.handle))
+        Ok(RawDrmSyncobjHandle(v.handle))
     }
 }
 unsafe impl Ioctl for DrmSyncobjDestroy {
@@ -253,7 +256,7 @@ unsafe impl Ioctl for DrmSyncobjHandleToFd {
     }
 }
 unsafe impl Ioctl for DrmSyncobjFdToHandle {
-    type Output = DrmSyncobjHandle;
+    type Output = RawDrmSyncobjHandle;
 
     const IS_MUTATING: bool = true;
 
@@ -271,7 +274,7 @@ unsafe impl Ioctl for DrmSyncobjFdToHandle {
     ) -> rustix::io::Result<Self::Output> {
         let ptr = extract_output as *mut Self;
         let v = unsafe { &(*ptr) };
-        Ok(DrmSyncobjHandle(v.handle))
+        Ok(v.handle)
     }
 }
 unsafe impl Ioctl for DrmSyncobjWait {
