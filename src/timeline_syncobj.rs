@@ -5,14 +5,15 @@ use std::{
 
 use crate::{
     bindings::{
-        DrmSyncobjCreate, DrmSyncobjDestroy, DrmSyncobjFdToHandle, DrmSyncobjHandleToFd,
-        DrmSyncobjTimelineSignal, DrmSyncobjTimelineWait, RawDrmSyncobjHandle, SyncobjCreateFlags,
-        SyncobjFdToHandleFlags, SyncobjHandleToFdFlags, SyncobjTimelineSignalFlags,
-        SyncobjWaitFlags,
+        DRM_CAP_SYNCOBJ, DRM_CAP_SYNCOBJ_TIMELINE, DrmGetCap, DrmSyncobjCreate, DrmSyncobjDestroy,
+        DrmSyncobjFdToHandle, DrmSyncobjHandleToFd, DrmSyncobjTimelineSignal,
+        DrmSyncobjTimelineWait, RawDrmSyncobjHandle, SyncobjCreateFlags, SyncobjFdToHandleFlags,
+        SyncobjHandleToFdFlags, SyncobjTimelineSignalFlags, SyncobjWaitFlags,
     },
     render_node::DrmRenderNode,
 };
 
+#[derive(Debug)]
 pub struct TimelineSyncObj {
     handle: RawDrmSyncobjHandle,
     render_node: DrmRenderNode,
@@ -90,6 +91,30 @@ impl TimelineSyncObj {
 
 impl TimelineSyncObj {
     pub fn create(render_node: &DrmRenderNode) -> rustix::io::Result<Self> {
+        let (syncobj_cap, timeline_syncobj_cap) = unsafe {
+            (
+                rustix::ioctl::ioctl(
+                    render_node,
+                    DrmGetCap {
+                        cap: DRM_CAP_SYNCOBJ,
+                        value: 0,
+                    },
+                )?,
+                rustix::ioctl::ioctl(
+                    render_node,
+                    DrmGetCap {
+                        cap: DRM_CAP_SYNCOBJ_TIMELINE,
+                        value: 0,
+                    },
+                )?,
+            )
+        };
+        if syncobj_cap == 0 {
+            panic!("syncobj not supported by drm driver");
+        }
+        if timeline_syncobj_cap == 0 {
+            panic!("timeline_syncobj not supported by drm driver");
+        }
         let handle = unsafe {
             rustix::ioctl::ioctl(
                 render_node,

@@ -13,7 +13,7 @@ impl TimelineSyncObj {
         &self,
         point: u64,
     ) -> rustix::io::Result<impl Future + 'static + Send + Sync> {
-        let event_fd = rustix::event::eventfd(0, EventfdFlags::NONBLOCK | EventfdFlags::NONBLOCK)?;
+        let event_fd = rustix::event::eventfd(0, EventfdFlags::NONBLOCK | EventfdFlags::CLOEXEC)?;
         unsafe {
             rustix::ioctl::ioctl(
                 self.get_render_node(),
@@ -27,16 +27,14 @@ impl TimelineSyncObj {
             )?;
         }
         // TODO: error handling
-        let async_fd = AsyncFd::new(event_fd).unwrap();
+        let mut async_fd = AsyncFd::new(event_fd).unwrap();
         Ok(async move {
             // TODO: error handling
-            let guard = async_fd.readable().await.unwrap();
-            guard
-                .try_io(|_| {
-                    let mut buf = [0u8; 8];
-                    rustix::io::read(async_fd.as_raw_fd(), &mut buf)
-                })
-                .unwrap();
+            let mut guard = async_fd.readable_mut().await.unwrap();
+            _ = guard.try_io(|fd| {
+                let mut buf = [0u8; 8];
+                Ok(rustix::io::read(fd, &mut buf)?)
+            });
         })
     }
 }

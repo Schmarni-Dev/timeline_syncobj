@@ -446,3 +446,25 @@ unsafe impl Ioctl for DrmSyncobjEventFd {
         Ok(())
     }
 }
+unsafe impl Ioctl for DrmGetCap {
+    type Output = u64;
+
+    const IS_MUTATING: bool = true;
+
+    fn opcode(&self) -> rustix::ioctl::Opcode {
+        read_write::<Self>(DRM_IOCTL_BASE, 0x0C)
+    }
+
+    fn as_ptr(&mut self) -> *mut rustix::ffi::c_void {
+        self as *mut _ as *mut _
+    }
+
+    unsafe fn output_from_ptr(
+        _out: rustix::ioctl::IoctlOutput,
+        extract_output: *mut rustix::ffi::c_void,
+    ) -> rustix::io::Result<Self::Output> {
+        let ptr = extract_output as *mut Self;
+        let v = unsafe { &(*ptr) };
+        Ok(v.value)
+    }
+}

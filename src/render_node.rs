@@ -9,7 +9,7 @@ use rustix::fs::{Mode, OFlags};
 pub struct DrmRenderNode(Arc<OwnedFd>);
 impl DrmRenderNode {
     pub fn new(id: u64) -> rustix::io::Result<Self> {
-        let path = format!("/dev/dri/renderD{}", id);
+        let path = format!("/dev/dri/renderD{}", id & 0xFF);
         rustix::fs::open(path, OFlags::RDWR | OFlags::CLOEXEC, Mode::empty())
             .map(Arc::new)
             .map(Self)
