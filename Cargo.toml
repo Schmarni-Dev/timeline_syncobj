@@ -1,9 +1,10 @@
 [package]
 name = "timeline_syncobj"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 license = "MIT-0/Apache-2.0"
 description = "bindings for the timeline variant of drm_syncobjs"
+repository = "https://github.com/Schmarni-Dev/timeline_syncobj"
 
 [features]
 default = []
