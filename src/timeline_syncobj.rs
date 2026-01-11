@@ -1,5 +1,5 @@
 use std::{
-    os::fd::{IntoRawFd, OwnedFd},
+    os::fd::{AsRawFd, BorrowedFd, OwnedFd},
     time::Duration,
 };
 
@@ -26,7 +26,8 @@ impl TimelineSyncObj {
                 &self.render_node,
                 DrmSyncobjHandleToFd {
                     handle: self.handle,
-                    flags: SyncobjHandleToFdFlags::EXPORT_SYNC_FILE,
+                    flags: SyncobjHandleToFdFlags::EXPORT_SYNC_FILE
+                        | SyncobjHandleToFdFlags::TIMELINE,
                     fd: 0,
                     _padding: 0,
                     point,
@@ -34,14 +35,19 @@ impl TimelineSyncObj {
             )
         }
     }
-    pub fn import_sync_file_point(&self, sync_file: OwnedFd, point: u64) -> rustix::io::Result<()> {
+    pub fn import_sync_file_point(
+        &self,
+        sync_file: BorrowedFd,
+        point: u64,
+    ) -> rustix::io::Result<()> {
         unsafe {
             rustix::ioctl::ioctl(
                 &self.render_node,
                 DrmSyncobjFdToHandle {
                     handle: self.handle,
-                    flags: SyncobjFdToHandleFlags::IMPORT_SYNC_FILE,
-                    fd: sync_file.into_raw_fd(),
+                    flags: SyncobjFdToHandleFlags::IMPORT_SYNC_FILE
+                        | SyncobjFdToHandleFlags::TIMELINE,
+                    fd: sync_file.as_raw_fd(),
                     _padding: 0,
                     point,
                 },
@@ -67,18 +73,19 @@ impl TimelineSyncObj {
         Ok(())
     }
     pub fn blocking_wait(&self, point: u64, timeout: Option<Duration>) -> rustix::io::Result<()> {
+        let handles: &[_] = &[self.handle];
+        let points: &[_] = &[point];
         unsafe {
             rustix::ioctl::ioctl(
                 &self.render_node,
                 DrmSyncobjTimelineWait {
-                    handles: &raw const self.handle as u64,
-                    points: [point].as_ptr() as u64,
+                    handles: handles.as_ptr() as u64,
+                    points: points.as_ptr() as u64,
                     timeout_nsec: timeout
-                        // TODO: return an error here
                         .and_then(|v| v.as_nanos().try_into().ok())
                         .unwrap_or(i64::MAX),
-                    count_handles: 1,
-                    flags: SyncobjWaitFlags::empty(),
+                    count_handles: handles.len() as u32,
+                    flags: SyncobjWaitFlags::AVAILABLE,
                     first_signaled: 0,
                     _padding: 0,
                     deadline_nsec: 0,
@@ -129,14 +136,14 @@ impl TimelineSyncObj {
             render_node: render_node.clone(),
         })
     }
-    pub fn import(render_node: &DrmRenderNode, fd: OwnedFd) -> rustix::io::Result<Self> {
+    pub fn import(render_node: &DrmRenderNode, fd: BorrowedFd) -> rustix::io::Result<Self> {
         let handle = unsafe {
             rustix::ioctl::ioctl(
                 render_node,
                 DrmSyncobjFdToHandle {
                     handle: RawDrmSyncobjHandle::NULL,
-                    flags: SyncobjFdToHandleFlags::TIMELINE,
-                    fd: fd.into_raw_fd(),
+                    flags: SyncobjFdToHandleFlags::empty(),
+                    fd: fd.as_raw_fd(),
                     _padding: 0,
                     point: 0,
                 },
