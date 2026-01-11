@@ -26,8 +26,7 @@ impl TimelineSyncObj {
                 &self.render_node,
                 DrmSyncobjHandleToFd {
                     handle: self.handle,
-                    flags: SyncobjHandleToFdFlags::EXPORT_SYNC_FILE
-                        | SyncobjHandleToFdFlags::TIMELINE,
+                    flags: SyncobjHandleToFdFlags::EXPORT_SYNC_FILE,
                     fd: 0,
                     _padding: 0,
                     point,
