@@ -82,7 +82,7 @@ impl TimelineSyncObj {
                 rustix::ioctl::ioctl(
                     &self.render_node,
                     DrmSyncobjFdToHandle {
-                        handle: self.handle,
+                        handle: tmp.handle,
                         flags: SyncobjFdToHandleFlags::IMPORT_SYNC_FILE,
                         fd: sync_file.as_raw_fd(),
                         _padding: 0,
@@ -265,7 +265,7 @@ impl TimelineSyncObj {
                 DrmSyncobjHandleToFd {
                     handle: self.handle,
                     flags: SyncobjHandleToFdFlags::empty(),
-                    fd: 0,
+                    fd: -1,
                     _padding: 0,
                     point: 0,
                 },

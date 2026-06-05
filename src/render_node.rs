@@ -25,7 +25,7 @@ impl DrmRenderNode {
                     handle: RawDrmSyncobjHandle::NULL,
                     flags: SyncobjHandleToFdFlags::EXPORT_SYNC_FILE
                         | SyncobjHandleToFdFlags::TIMELINE,
-                    fd: 0,
+                    fd: -1,
                     _padding: 0,
                     point: 1,
                 },
