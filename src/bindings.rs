@@ -50,6 +50,7 @@ bitflags! {
 }
 bitflags! {
     #[repr(transparent)]
+    #[derive(Debug)]
     pub struct SyncobjHandleToFdFlags: u32 {
         const EXPORT_SYNC_FILE = 1 << 0;
         const TIMELINE = 1 << 1;
@@ -101,9 +102,13 @@ pub struct DrmSyncobjTransfer {
 bitflags! {
     #[repr(transparent)]
     pub struct SyncobjWaitFlags: u32 {
+        /// Wait for all provided syncobjs to be signaled, instead of returning when one is signaled
         const ALL = 1 << 0;
+        /// Wait for the underlying fence to be available before waiting on the fence
         const FOR_SUBMIT = 1 << 1;
+        /// Only wait for the fence to be available, not for it to be signaled
         const AVAILABLE = 1 << 2;
+        /// Set absolute deadline point, used for scheduling
         const DEADLINE = 1 << 3;
 
         const _ = !0;
@@ -172,7 +177,6 @@ bitflags! {
 bitflags! {
     #[repr(transparent)]
     pub struct SyncobjTimelineSignalFlags: u32 {
-        // const LAST_SUBMITTED = 1 << 0;
 
         const _ = !0;
     }
