@@ -1,6 +1,5 @@
 use std::{
-    io::ErrorKind,
-    os::fd::{AsFd, AsRawFd, BorrowedFd, OwnedFd},
+    os::fd::{AsFd, AsRawFd, OwnedFd},
     time::Duration,
 };
 
@@ -16,6 +15,7 @@ use crate::{
     render_node::DrmRenderNode,
 };
 
+/// point 0 is a special case, start counting at 1
 #[derive(Debug)]
 pub struct TimelineSyncObj {
     handle: RawDrmSyncobjHandle,
@@ -23,21 +23,37 @@ pub struct TimelineSyncObj {
 }
 
 impl TimelineSyncObj {
+    /// the point needs to be available for the export to succeed
     pub fn export_sync_file_point(&self, point: u64) -> rustix::io::Result<OwnedFd> {
-        // TODO: impl workaround for older kernels by transfering the point to a binary
-        // syncobj and exporting that
-        unsafe {
-            rustix::ioctl::ioctl(
-                &self.render_node,
-                DrmSyncobjHandleToFd {
-                    handle: self.handle,
-                    flags: SyncobjHandleToFdFlags::EXPORT_SYNC_FILE
-                        | SyncobjHandleToFdFlags::TIMELINE,
-                    fd: 0,
-                    _padding: 0,
-                    point,
-                },
-            )
+        if self.render_node.direct_syncfile {
+            unsafe {
+                rustix::ioctl::ioctl(
+                    &self.render_node,
+                    DrmSyncobjHandleToFd {
+                        handle: self.handle,
+                        flags: SyncobjHandleToFdFlags::EXPORT_SYNC_FILE
+                            | SyncobjHandleToFdFlags::TIMELINE,
+                        fd: -1,
+                        _padding: 0,
+                        point,
+                    },
+                )
+            }
+        } else {
+            let tmp = TimelineSyncObj::new(&self.render_node)?;
+            self.transfer_point(&tmp, point, 0)?;
+            unsafe {
+                rustix::ioctl::ioctl(
+                    &self.render_node,
+                    DrmSyncobjHandleToFd {
+                        handle: tmp.handle,
+                        flags: SyncobjHandleToFdFlags::EXPORT_SYNC_FILE,
+                        fd: -1,
+                        _padding: 0,
+                        point: 0,
+                    },
+                )
+            }
         }
     }
     pub fn import_sync_file_point(
@@ -46,21 +62,36 @@ impl TimelineSyncObj {
         point: u64,
     ) -> rustix::io::Result<()> {
         let sync_file = sync_file.as_fd();
-        // TODO: impl workaround for older kernels by importing into a binary syncobj and
-        // transfering that to the point
-        unsafe {
-            rustix::ioctl::ioctl(
-                &self.render_node,
-                DrmSyncobjFdToHandle {
-                    handle: self.handle,
-                    flags: SyncobjFdToHandleFlags::IMPORT_SYNC_FILE
-                        | SyncobjFdToHandleFlags::TIMELINE,
-                    fd: sync_file.as_raw_fd(),
-                    _padding: 0,
-                    point,
-                },
-            )?
-        };
+        if self.render_node.direct_syncfile {
+            unsafe {
+                rustix::ioctl::ioctl(
+                    &self.render_node,
+                    DrmSyncobjFdToHandle {
+                        handle: self.handle,
+                        flags: SyncobjFdToHandleFlags::IMPORT_SYNC_FILE
+                            | SyncobjFdToHandleFlags::TIMELINE,
+                        fd: sync_file.as_raw_fd(),
+                        _padding: 0,
+                        point,
+                    },
+                )?
+            };
+        } else {
+            let tmp = TimelineSyncObj::new(&self.render_node)?;
+            unsafe {
+                rustix::ioctl::ioctl(
+                    &self.render_node,
+                    DrmSyncobjFdToHandle {
+                        handle: tmp.handle,
+                        flags: SyncobjFdToHandleFlags::IMPORT_SYNC_FILE,
+                        fd: sync_file.as_raw_fd(),
+                        _padding: 0,
+                        point: 0,
+                    },
+                )?
+            };
+            tmp.transfer_point(self, 0, point)?;
+        }
         Ok(())
     }
 
@@ -234,7 +265,7 @@ impl TimelineSyncObj {
                 DrmSyncobjHandleToFd {
                     handle: self.handle,
                     flags: SyncobjHandleToFdFlags::empty(),
-                    fd: 0,
+                    fd: -1,
                     _padding: 0,
                     point: 0,
                 },
@@ -300,10 +331,10 @@ fn sharing() {
 
 #[test]
 fn sync_file_exporting() {
+    use std::io::ErrorKind;
     let node = crate::render_node::DrmRenderNode::new(128).expect("failed to open render node");
     let obj = TimelineSyncObj::new(&node).expect("failed to create syncojb");
-    let obj_fd = obj.export().expect("failed to export syncobj");
-    let obj2 = TimelineSyncObj::import(&node, obj_fd).expect("failed to import syncobj");
+    let obj2 = TimelineSyncObj::new(&node).expect("failed to create second syncobj");
     assert!(
         obj.export_sync_file_point(32)
             .is_err_and(|err| err.kind() == ErrorKind::InvalidInput)
