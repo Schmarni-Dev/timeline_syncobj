@@ -10,6 +10,14 @@ repository = "https://github.com/Schmarni-Dev/timeline_syncobj"
 default = []
 tokio = ["dep:tokio", "rustix/event"]
 
+[package.metadata.docs.rs]
+features = ["tokio"]
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "i686-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+]
+
 [dependencies]
 bitflags = "2.10.0"
 derive_more = { version = "2.1.1", features = ["deref"] }

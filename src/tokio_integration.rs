@@ -52,6 +52,7 @@ impl TimelineSyncObj {
     }
 }
 
+#[cfg(test)]
 #[tokio::test]
 async fn async_wait() {
     let node = crate::render_node::DrmRenderNode::new(128).expect("failed to open render node");
