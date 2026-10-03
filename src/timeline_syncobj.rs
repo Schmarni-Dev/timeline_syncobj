@@ -142,7 +142,7 @@ impl TimelineSyncObj {
         };
         Ok(())
     }
-    /// # Safety:
+    /// # Safety
     /// if you did any gpu work make sure to only signal this after the work is actually complete,
     /// using something like a fence or VkTimelineSemaphore
     pub unsafe fn signal(&self, point: u64) -> rustix::io::Result<()> {
@@ -272,7 +272,7 @@ impl TimelineSyncObj {
             )
         }
     }
-    /// # Safety:
+    /// # Safety
     /// Don't destroy the raw handle
     pub unsafe fn get_raw_handle(&self) -> RawDrmSyncobjHandle {
         self.handle

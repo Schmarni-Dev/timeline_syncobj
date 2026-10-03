@@ -300,7 +300,7 @@ unsafe impl Ioctl for DrmSyncobjWait {
     ) -> rustix::io::Result<Self::Output> {
         let ptr = extract_output as *mut Self;
         let v = unsafe { &(*ptr) };
-        Ok((!v.flags.contains(SyncobjWaitFlags::ALL)).then(|| v.first_signaled))
+        Ok((!v.flags.contains(SyncobjWaitFlags::ALL)).then_some(v.first_signaled))
     }
 }
 unsafe impl Ioctl for DrmSyncobjReset {
@@ -362,7 +362,7 @@ unsafe impl Ioctl for DrmSyncobjTimelineWait {
     ) -> rustix::io::Result<Self::Output> {
         let ptr = extract_output as *mut Self;
         let v = unsafe { &(*ptr) };
-        Ok((!v.flags.contains(SyncobjWaitFlags::ALL)).then(|| v.first_signaled))
+        Ok((!v.flags.contains(SyncobjWaitFlags::ALL)).then_some(v.first_signaled))
     }
 }
 unsafe impl Ioctl for DrmSyncobjTimelineQuery {
