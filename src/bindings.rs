@@ -138,7 +138,7 @@ pub struct DrmSyncobjTimelineWait {
 bitflags! {
     #[repr(transparent)]
     pub struct SyncobjEventFdFlags: u32 {
-        const WAIT_AVAILABLE = 1 << 0;
+        const WAIT_AVAILABLE = 1 << 2;
 
         const _ = !0;
     }
